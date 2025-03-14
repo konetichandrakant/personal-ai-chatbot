@@ -31,9 +31,10 @@ function App() {
             });
 
             const data = await res.json();
-            const botMessage = { sender: "bot", text: data.response };
+            const botMessage = { sender: "bot", text: data.ai_response };
             setMessages((prev) => [...prev, botMessage]);
         } catch (error) {
+            console.log(error);
             setMessages((prev) => [...prev, { sender: "bot", text: "Error fetching response." }]);
         }
         setLoading(false);
