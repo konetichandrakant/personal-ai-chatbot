@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AppBar, Toolbar, Typography, TextField, IconButton, Paper, Container, Box, CircularProgress } from "@mui/material";
+import { AppBar, Toolbar, Typography, TextField, IconButton, Paper, Container, Box, CircularProgress, Fab } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-import ScrollToBottom from "react-scroll-to-bottom";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"; 
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showScrollButton, setShowScrollButton] = useState(false);
     const inputRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
-    // Simulate an empty UI state when no messages exist
     const emptyState = messages.length === 0;
 
     const handleSend = async () => {
@@ -44,9 +45,20 @@ function App() {
         inputRef.current?.focus();
     }, []);
 
+    const handleScroll = () => {
+        if (chatContainerRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+            setShowScrollButton(scrollHeight - scrollTop > clientHeight + 100); 
+        }
+    };
+
+    const scrollToBottom = () => {
+        chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: "smooth" });
+        setShowScrollButton(false);
+    };
+
     return (
         <Container maxWidth="md">
-            {/* Chat Header */}
             <AppBar position="static" style={{ background: "#ffffff", color: "#000" }}>
                 <Toolbar>
                     <ChatBubbleOutlineIcon style={{ marginRight: 10 }} />
@@ -54,14 +66,31 @@ function App() {
                 </Toolbar>
             </AppBar>
 
-            {/* Chat Area */}
-            <Paper elevation={3} sx={{ height: "76vh", overflow: "hidden", marginTop: 2, display: "flex", flexDirection: "column" }}>
+            <Paper elevation={3} 
+                sx={{
+                    height: "76vh",
+                    marginTop: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    position: "relative",
+                    padding: 2
+                }}
+            >
                 {emptyState ? (
                     <Box sx={{ textAlign: "center", marginTop: "30%", color: "#aaa" }}>
                         <Typography variant="h5">Ask me anything regarding your personal life</Typography>
                     </Box>
                 ) : (
-                    <ScrollToBottom className="chat-container" style={{ flexGrow: 1, padding: "15px", overflowY: "auto" }}>
+                    <Box 
+                        ref={chatContainerRef}
+                        sx={{
+                            flexGrow: 1,
+                            overflowY: "auto",
+                            padding: "15px",
+                            maxHeight: "65vh"  // Ensure scrolling when content exceeds this height
+                        }}
+                        onScroll={handleScroll}
+                    >
                         {messages.map((msg, index) => (
                             <Box
                                 key={index}
@@ -78,6 +107,9 @@ function App() {
                                         backgroundColor: msg.sender === "user" ? "#0078FF" : "#F1F1F1",
                                         color: msg.sender === "user" ? "#fff" : "#000",
                                         maxWidth: "75%",
+                                        wordWrap: "break-word",
+                                        overflowWrap: "break-word",
+                                        whiteSpace: "pre-wrap"
                                     }}
                                 >
                                     {msg.text}
@@ -89,11 +121,21 @@ function App() {
                                 <CircularProgress size={24} />
                             </Box>
                         )}
-                    </ScrollToBottom>
+                    </Box>
+                )}
+
+                {showScrollButton && (
+                    <Fab 
+                        color="primary" 
+                        size="small" 
+                        onClick={scrollToBottom} 
+                        sx={{ position: "absolute", bottom: 20, right: 20 }}
+                    >
+                        <KeyboardArrowDownIcon />
+                    </Fab>
                 )}
             </Paper>
 
-            {/* Input Box */}
             <Box sx={{ display: "flex", marginTop: 2 }}>
                 <TextField
                     fullWidth
