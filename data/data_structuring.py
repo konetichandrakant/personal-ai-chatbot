@@ -12,9 +12,24 @@ with open(INPUT_FILE, "r", encoding="utf-8") as file:
 
 # Step 2: Extract messages and remove time (keep only date)
 def extract_messages(chat_text):
-    pattern = re.compile(r'(\d{2}/\d{2}/\d{2}), \d{1,2}:\d{2}\s?[ap]m - (.*?): (.*)')
-    messages = pattern.findall(chat_text)
-    return [[date, user, message] for date, user, message in messages if "<Media omitted>" not in message]
+    pattern = re.compile(r'^(\d{2}/\d{2}/\d{2}), \d{1,2}:\d{2}\s?[ap]m - (.*?): (.*)')
+    messages = []
+    current_message = None
+    
+    for line in chat_text.split("\n"):
+        match = pattern.match(line)
+        if match:
+            date, user, message = match.groups()
+            if current_message:
+                messages.append(current_message)
+            current_message = [date, user, message]
+        elif current_message:
+            current_message[2] += " " + line.strip()
+    
+    if current_message:
+        messages.append(current_message)
+    
+    return [msg for msg in messages if "<Media omitted>" not in msg[2]]
 
 extracted_messages = extract_messages(whatsapp_chat)
 
@@ -24,8 +39,6 @@ structured_texts = []
 
 for message_data in extracted_messages:
     date, user, message = message_data  # Extract list elements
-    
-    # Store structured data in list format
     structured_messages.append([date, user, message])
     structured_texts.append(f"{date} - {user}: {message}")
 

@@ -40,7 +40,7 @@ vector_store = FAISS.load_local(
 class ChatRequest(BaseModel):
     query: str
 
-def search_whatsapp(query, top_k=10):
+def search_whatsapp(query, top_k=15):
     try:
         retrieved_docs = vector_store.similarity_search(query, k=top_k)
         return [doc.page_content for doc in retrieved_docs]
@@ -57,7 +57,7 @@ def call_openrouter(query, retrieved_messages):
     data = {
         "model": "mistralai/mistral-7b-instruct",
         "messages": [
-            {"role": "system", "content": "You are an AI assistant analyzing WhatsApp messages and providing useful responses."},
+            {"role": "system", "content": "You are an AI assistant analyzing WhatsApp messages. Strictly answer only based on the provided query and related messages. Do not include any information about other people that is not explicitly mentioned in the query. Do not infer or assume details beyond what is given. Only provide direct relevant answers without adding context from external sources or making the response generic."},
             {"role": "user", "content": f"Query: {query}\n\nRelated messages:\n{retrieved_messages}"}
         ]
     }
@@ -70,7 +70,7 @@ def call_openrouter(query, retrieved_messages):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     query = request.query
-    retrieved_messages = search_whatsapp(query, top_k=5)
+    retrieved_messages = search_whatsapp(query, top_k=15)
     if not retrieved_messages:
         return {"response": "No matching messages found."}
     retrieved_messages_str = "\n".join(retrieved_messages)
