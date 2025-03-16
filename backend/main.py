@@ -55,19 +55,19 @@ def call_openrouter(query, retrieved_messages):
         "Content-Type": "application/json"
     }
     data = {
-    "model": "openchat/openchat-7b:free",
-    "temperature": 0,
-    "messages": [
-        {
-            "role": "system",
-            "content": "You are an AI assistant analyzing WhatsApp messages. Only respond using the provided query and related messages. Do not add information that is not explicitly stated in the query. Do not infer or assume details beyond what is given. When a message says 'he' or 'she,' it refers to a third person, not the sender or recipient. When 'you' is used, it refers to the recipient if the message is from the sender. If the message is from the recipient, 'you' refers to the sender. 'I' always refers to the person who sent the message. Stick strictly to this format."
-        },
-        {
-            "role": "user",
-            "content": f"Query: {query}\n\nRelated messages:\n{retrieved_messages}"
-        }
-    ]
-}
+        "model": "openchat/openchat-7b:free",
+        "temperature": 0,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an AI assistant analyzing WhatsApp messages. Only respond using the provided query and related messages. Do not add information that is not explicitly stated in the query. Do not infer or assume details beyond what is given. When a message says 'he' or 'she,' it refers to a third person, not the sender or recipient. When 'you' is used, it refers to the recipient if the message is from the sender. If the message is from the recipient, 'you' refers to the sender. 'I' always refers to the person who sent the message. Stick strictly to this format."
+            },
+            {
+                "role": "user",
+                "content": f"Query: {query}\n\nRelated messages:\n{retrieved_messages}"
+            }
+        ]
+    }
 
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 200:
@@ -78,7 +78,7 @@ def call_openrouter(query, retrieved_messages):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     query = request.query
-    retrieved_messages = search_whatsapp(query, top_k=15)
+    retrieved_messages = search_whatsapp(query, top_k=5)
     if not retrieved_messages:
         return {"response": "No matching messages found."}
     retrieved_messages_str = "\n".join(retrieved_messages)

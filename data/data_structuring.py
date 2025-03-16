@@ -33,17 +33,26 @@ def extract_messages(chat_text):
 
 extracted_messages = extract_messages(whatsapp_chat)
 
-# Step 3: Process each message (No Translation, Just Structuring)
+# Step 3: Append "(PersonX)" or "(Me)" next to "U", "u", "You", "you"
+def replace_person_references(user, message):
+    print(user)
+    if user == "Me / My message":
+        return re.sub(r'\b(U|u|You|you)\b', r'\1 (This word here refers to PersonX)', message)
+    else:
+        return re.sub(r'\b(U|u|You|you)\b', r'\1 (This word here refers to asking me not PersonX themself)', message)
+
+# Step 4: Process each message
 structured_messages = []
 structured_texts = []
 
 for message_data in extracted_messages:
-    date, user, message = message_data  # Extract list elements
-    structured_messages.append([date, user, message])
-    structured_texts.append(f"{date} - {user}: {message}")
+    date, user, message = message_data  
+    modified_message = replace_person_references(user, message)
+    structured_messages.append([date, user, modified_message])
+    structured_texts.append(f"{date} - {user}: {modified_message}")
 
-# Step 4: Save the structured text to the output file
+# Step 5: Save the structured text to the output file
 with open(OUTPUT_FILE, "w", encoding="utf-8") as file:
     file.write("\n".join(structured_texts))
 
-print("Structuring complete!")
+print("✅ Structuring complete! References updated with (PersonX) or (Me).")
