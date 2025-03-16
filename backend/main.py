@@ -40,7 +40,7 @@ vector_store = FAISS.load_local(
 class ChatRequest(BaseModel):
     query: str
 
-def search_whatsapp(query, top_k=15):
+def search_whatsapp(query, top_k):
     try:
         retrieved_docs = vector_store.similarity_search(query, k=top_k)
         return [doc.page_content for doc in retrieved_docs]
@@ -55,12 +55,20 @@ def call_openrouter(query, retrieved_messages):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "mistralai/mistral-7b-instruct",
-        "messages": [
-            {"role": "system", "content": "You are an AI assistant analyzing WhatsApp messages. Strictly answer only based on the provided query and related messages. Do not include any information about other people that is not explicitly mentioned in the query. Do not infer or assume details beyond what is given. Only provide direct relevant answers without adding context from external sources or making the response generic."},
-            {"role": "user", "content": f"Query: {query}\n\nRelated messages:\n{retrieved_messages}"}
-        ]
-    }
+    "model": "openchat/openchat-7b:free",
+    "temperature": 0,
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an AI assistant analyzing WhatsApp messages. Only respond using the provided query and related messages. Do not add information that is not explicitly stated in the query. Do not infer or assume details beyond what is given. When a message says 'he' or 'she,' it refers to a third person, not the sender or recipient. When 'you' is used, it refers to the recipient if the message is from the sender. If the message is from the recipient, 'you' refers to the sender. 'I' always refers to the person who sent the message. Stick strictly to this format."
+        },
+        {
+            "role": "user",
+            "content": f"Query: {query}\n\nRelated messages:\n{retrieved_messages}"
+        }
+    ]
+}
+
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 200:
         return response.json()["choices"][0]["message"]["content"]

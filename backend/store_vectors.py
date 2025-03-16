@@ -3,6 +3,7 @@ import os
 import re
 from datetime import datetime
 from langchain_community.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FOLDER = os.path.join(BASE_DIR, "data")
@@ -18,11 +19,14 @@ def parse_whatsapp_chat():
 
     with open(INPUT_TXT_FILE, "r", encoding="utf-8") as f:
         for line in f:
-            match = pattern.match(line)
+            match = pattern.match(line.strip())
             if match:
                 date, sender, message = match.groups()
-                timestamp = datetime.strptime(date, "%d/%m/%y").strftime("%Y-%m-%d")
-                messages.append(f"{sender}: {message} ({timestamp})")
+                try:
+                    timestamp = datetime.strptime(date, "%d/%m/%y").strftime("%Y-%m-%d")
+                    messages.append(f"{sender}: {message} ({timestamp})")
+                except ValueError as e:
+                    print(f"Skipping invalid date format in line: {line.strip()} - Error: {e}")
 
     print(f"Extracted {len(messages)} messages from {INPUT_TXT_FILE}")
     return messages
@@ -33,10 +37,9 @@ def store_whatsapp_vectors():
     if not text_data:
         raise ValueError("No messages found in the file.")
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = model.encode(text_data, convert_to_numpy=True).tolist()
-    text_embeddings = [(text, emb) for text, emb in zip(text_data, embeddings)]
-    vector_store = FAISS.from_embeddings(text_embeddings=text_embeddings, embedding=model)
+    model_name = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model = HuggingFaceEmbeddings(model_name=model_name)
+    vector_store = FAISS.from_texts(text_data, embedding=embedding_model)
     vector_store.save_local(VECTOR_STORE_PATH)
 
     print(f"Stored {len(text_data)} messages as vector embeddings in FAISS at {VECTOR_STORE_PATH}")
