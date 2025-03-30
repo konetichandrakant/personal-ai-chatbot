@@ -32,7 +32,7 @@ function App() {
             });
 
             const data = await res.json();
-            const botMessage = { sender: "bot", text: data.ai_response };
+            const botMessage = { sender: "bot", text: data.ai_response+" \n\nRelated chats between you and them: \n"+data.search_results};
             setMessages((prev) => [...prev, botMessage]);
         } catch (error) {
             console.log(error);
@@ -87,7 +87,7 @@ function App() {
                             flexGrow: 1,
                             overflowY: "auto",
                             padding: "15px",
-                            maxHeight: "65vh"  // Ensure scrolling when content exceeds this height
+                            maxHeight: "65vh"
                         }}
                         onScroll={handleScroll}
                     >
