@@ -66,7 +66,8 @@ def get_message_from_db(message_id, first_messsage_of_context=False):
         result = cursor.fetchone()
         if result:
             message, timestamp, sender = result
-            return timestamp+", " + sender + ": " + message
+            # return "Dated: "+timestamp+"\n" + sender + ": " + message
+            return { "timestamp": timestamp, "message": message, "sender": sender }
         else:
             print("Message not found")
             return None
@@ -75,15 +76,17 @@ def get_message_from_db(message_id, first_messsage_of_context=False):
         result = cursor.fetchone()
         if result:
             message, sender = result
-            return sender + ": " + message
+            # return sender + ": " + message
+            return { "message": message, "sender": sender }
         else:
             print("Message not found")
             return None
 
 def attach_context_messages(top_msgs, current_msg, bottom_msgs):
-    context_messages = "\n".join([msg for msg in top_msgs])
-    context_messages += "\n" + current_msg + "\n"
-    context_messages += "\n".join([msg for msg in bottom_msgs])
+    context_messages = []
+    context_messages.extend(top_msgs)
+    context_messages.append(current_msg)
+    context_messages.extend(bottom_msgs)
     return context_messages
 
 def get_top_k_context_messages(message_id, top_k):    
@@ -116,12 +119,31 @@ def get_bottom_k_context_messages(message_id, bottom_k):
         print("No more messages.")
         return []
 
+def format_message(message_json):
+    formatted_message = ""
+    if "timestamp" in message_json:
+        formatted_message += f"Dated: {message_json['timestamp']} \n "
+    if "sender" in message_json:
+        formatted_message += f"{message_json['sender']}: "
+    if "message" in message_json:
+        formatted_message += message_json["message"]
+    return formatted_message
+
+def restructuring_messages_for_model(top_msgs, current_msg, bottom_msgs):
+    formatted_messages = []
+    for i in range(len(top_msgs)):
+        formatted_messages.append(format_message(top_msgs[i]))
+    formatted_messages.append(format_message(current_msg))
+    for i in range(len(bottom_msgs)):
+        formatted_messages.append(format_message(bottom_msgs[i]))
+    return " \n ".join(formatted_messages)
+
 def get_context_messages(message):
     current_message_id = get_message_id_from_message(message)
     top_msgs = get_top_k_context_messages(current_message_id, top_k=3)
     current_msg = get_message_from_db(current_message_id)
     bottom_msgs = get_bottom_k_context_messages(current_message_id, bottom_k=2)
-    return attach_context_messages(top_msgs, current_msg, bottom_msgs)
+    return [restructuring_messages_for_model(top_msgs, current_msg, bottom_msgs), attach_context_messages(top_msgs, current_msg, bottom_msgs)]
     
 def get_message_id_from_message(message):
     pattern = r"\( message_id: (\d+) \)"
@@ -130,13 +152,15 @@ def get_message_id_from_message(message):
     return int(message_id)
 
 def search_whatsapp(query, top_k):
-    all_context_msgs = []
+    all_context_msgs_for_model = []
+    all_context_msgs_for_client = []
     try:
         retrieved_docs = vector_store.similarity_search(query, k=top_k)        
         for doc in retrieved_docs:
             context_msgs = get_context_messages(doc.page_content)
-            all_context_msgs.append(context_msgs)
-        return all_context_msgs
+            all_context_msgs_for_model.append(context_msgs[0])
+            all_context_msgs_for_client.append(context_msgs[1])
+        return [all_context_msgs_for_model, all_context_msgs_for_client]
     except Exception as e:
         print(f"FAISS Retrieval Error: {e}")
         return []
@@ -174,5 +198,5 @@ async def chat(request: ChatRequest):
     retrieved_messages = search_whatsapp(query, top_k=5)
     if not retrieved_messages:
         return {"response": "No matching messages found."}
-    ai_response = call_openrouter(query+" please look into messages they are bundled of day time context and make decisions on text or bundle they are also seperated by \n for each message", ["Chat context between myself and PersonX on particular day:" + msg for msg in retrieved_messages[0:2]])
-    return {"search_results": retrieved_messages, "ai_response": ai_response}
+    ai_response = call_openrouter(query+" please look into messages they are bundled of day time context and make decisions on text or bundle they are also seperated by \n for each message", ["Chat context between myself and PersonX on particular day:" + msg for msg in retrieved_messages[0]])
+    return {"search_results": retrieved_messages[1], "ai_response": ai_response}

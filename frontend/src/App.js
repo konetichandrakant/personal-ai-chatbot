@@ -23,7 +23,7 @@ function App() {
         setQuery("");
 
         try {
-            const res = await fetch(`http://localhost:8000/chat`, {
+            const res = await fetch("http://localhost:8000/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -32,7 +32,45 @@ function App() {
             });
 
             const data = await res.json();
-            const botMessage = { sender: "bot", text: data.ai_response+" \n\nRelated chats between you and them: \n"+data.search_results};
+
+            const botMessage = {
+                sender: "bot",
+                text: (
+                    <div>
+                        <div style={{ fontWeight: "bold" }}>
+                            AI Response: {data.ai_response}
+                        </div>
+                        <br />
+                        <div style={{ color: "#FFCC00", fontWeight: "bold" }}>
+                            Previous related chat context on different dates between you and PersonX:
+                        </div>
+                        <br />
+                        {data.search_results.map((result, index) => (
+                            <div key={index}>
+                                {result.map((msg, idx) => (
+                                    <div key={idx}>
+                                        {
+                                            msg.timestamp && (
+                                                <div>
+                                                    <span style={{ fontWeight: "bold" }}>Date: </span>
+                                                    <span style={{ color: "#0078FF" }}>{msg.timestamp}</span>
+                                                </div>
+                                            )
+                                        }
+                                        <div>
+                                            <span style={{ color: msg.sender === "Me / My message" ? "green" : "red" }}>
+                                                {msg.sender === "Me / My message" ? "Me" : "PersonX"}
+                                            </span> : {msg.message}
+                                        </div>
+                                    </div>
+                                ))}
+                                <br />
+                            </div>
+                        ))}
+                    </div>
+                ),
+            };
+
             setMessages((prev) => [...prev, botMessage]);
         } catch (error) {
             console.log(error);
